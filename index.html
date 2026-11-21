@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guldjakten</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#f1eeff;--card:#fff;--ink:#1d1b3a;--mut:#65628c;--pri:#5b3df5;--onpri:#fff;--gold:#e8a800;--ok:#178a58;--bad:#d8374f;--a:#d8403a;--b:#2468c9;--c:#b0700a;--d:#178a58;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16143a;--card:#232155;--ink:#f1efff;--mut:#aaa7d8;--pri:#8b74ff;--onpri:#12102e;--gold:#ffc72c}}
+:root[data-theme="dark"]{--bg:#16143a;--card:#232155;--ink:#f1efff;--mut:#aaa7d8;--pri:#8b74ff;--onpri:#12102e;--gold:#ffc72c}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Fredoka',system-ui,sans-serif;font-size:18px;line-height:1.4}
+main{max-width:640px;margin:0 auto;padding:20px 16px 40px}
+h1{font-size:clamp(2.4rem,9vw,3.6rem);margin:.2em 0 .1em;line-height:1}
+h2{font-size:1.5rem;margin:.2em 0 .6em;line-height:1.25}
+p{color:var(--mut);margin:.3em 0 1em}
+.card{background:var(--card);border-radius:20px;padding:22px;box-shadow:0 4px 0 rgba(0,0,0,.12)}
+button{font:inherit;font-weight:600;cursor:pointer;border:0;border-radius:14px;padding:14px 20px;color:var(--onpri);background:var(--pri);box-shadow:0 4px 0 rgba(0,0,0,.25)}
+button:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.25)}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+button.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--mut)}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.hud{display:flex;justify-content:space-between;gap:8px;font-weight:600;margin-bottom:14px}
+.hud span{background:var(--card);padding:6px 14px;border-radius:99px}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+@media (max-width:480px){.opts{grid-template-columns:1fr}}
+.opt{min-height:84px;color:#fff;text-align:left;display:flex;gap:10px;align-items:center;font-size:1.05rem}
+.opt:nth-child(1){background:var(--a)}.opt:nth-child(2){background:var(--b)}.opt:nth-child(3){background:var(--c)}.opt:nth-child(4){background:var(--d)}
+.opt.ok{outline:5px solid var(--ok);outline-offset:2px}
+.opt.no{opacity:.45}
+.chests{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:18px 0}
+.chest{font-size:2.6rem;background:var(--card);color:var(--ink);padding:22px 4px;min-height:130px;line-height:1.1}
+.chest small{display:block;font-size:.85rem;margin-top:8px;font-weight:600}
+.chest.pop{animation:pop .35s}
+@keyframes pop{50%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.chest.pop{animation:none}}
+.big{font-size:3rem;font-weight:700;color:var(--gold)}
+textarea{width:100%;min-height:260px;font:inherit;font-size:.95rem;padding:12px;border-radius:12px;border:2px solid var(--mut);background:var(--bg);color:var(--ink)}
+.msg{min-height:1.6em;font-weight:600}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<script>
+const DEFAULT=`Vad heter Sveriges huvudstad? | Stockholm | Göteborg | Malmö | Uppsala
+Hur många ben har en spindel? | 8 | 6 | 10 | 12
+Vilken planet är närmast solen? | Merkurius | Venus | Mars | Jorden
+Vad är 7 × 8? | 56 | 54 | 48 | 63
+Vilket språk talas i Brasilien? | Portugisiska | Spanska | Engelska | Franska
+Vilket är världens största hav? | Stilla havet | Atlanten | Indiska oceanen | Norra ishavet
+Vem skrev Pippi Långstrump? | Astrid Lindgren | Selma Lagerlöf | Tove Jansson | Elsa Beskow
+Vilken gas andas växter in för att växa? | Koldioxid | Syre | Kväve | Helium
+Vilken stad ligger vid Öresund och är känd för Turning Torso? | Malmö | Lund | Helsingborg | Ystad
+Hur många minuter är det i en timme? | 60 | 50 | 100 | 90
+Vilket djur är störst i världen? | Blåval | Elefant | Giraff | Späckhuggare
+Vilken färg får man om man blandar blått och gult? | Grön | Lila | Orange | Brun`;
+const POOL=[{t:'+10 guld',f:g=>g+10},{t:'+25 guld',f:g=>g+25},{t:'+50 guld',f:g=>g+50},{t:'Dubbelt guld!',f:g=>g*2},{t:'Tjuv! −20 guld',f:g=>Math.max(0,g-20)}];
+let text=DEFAULT,Q=[],i=0,gold=0,streak=0,right=0,locked=false,cur=[];
+const app=document.getElementById('app');
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const shuf=a=>{a=a.slice();for(let k=a.length-1;k>0;k--){const j=Math.random()*(k+1)|0;[a[k],a[j]]=[a[j],a[k]]}return a};
+const parse=t=>t.split('\n').map(l=>l.split('|').map(s=>s.trim()).filter(Boolean)).filter(p=>p.length>=3).map(p=>({q:p[0],a:p[1],o:p.slice(1,5)}));
+
+function home(){
+  const n=parse(text).length;
+  app.innerHTML=`<h1>🪙 Guldjakten</h1><p>Svara rätt, öppna kistor och samla så mycket guld du kan.</p>
+  <div class="card"><h2>${n} frågor redo</h2><p>Du spelar tio frågor per omgång. Rätt svar ger 5 guld och en kista med överraskning.</p>
+  <div class="row"><button onclick="start()">Spela</button><button class="ghost" onclick="edit()">Egna frågor</button></div></div>`;
+}
+function start(){
+  Q=shuf(parse(text)).slice(0,10);
+  if(!Q.length){edit('Lägg till minst en fråga först.');return}
+  i=0;gold=0;streak=0;right=0;ask();
+}
+function hud(){return `<div class="hud"><span>Fråga ${i+1}/${Q.length}</span><span>🔥 ${streak}</span><span>🪙 ${gold}</span></div>`}
+function ask(){
+  locked=false;cur=shuf(Q[i].o);
+  const sym=['▲','◆','●','■'];
+  app.innerHTML=hud()+`<div class="card"><h2>${esc(Q[i].q)}</h2></div><div class="opts">`+
+    cur.map((o,k)=>`<button class="opt" onclick="pick(${k})"><span aria-hidden="true">${sym[k]}</span>${esc(o)}</button>`).join('')+`</div>`;
+}
+function pick(k){
+  if(locked)return;locked=true;
+  const ok=cur[k]===Q[i].a;
+  [...document.querySelectorAll('.opt')].forEach((b,j)=>{if(cur[j]===Q[i].a)b.classList.add('ok');else b.classList.add('no')});
+  if(ok){streak++;right++;gold+=5}else streak=0;
+  setTimeout(ok?chests:next,ok?800:1600);
+}
+function chests(){
+  const r=shuf(POOL).slice(0,3);
+  app.innerHTML=hud()+`<div class="card"><h2>Rätt! Välj en kista</h2><p>Vad göms i kistan? Det kan till och med vara en tjuv.</p>
+  <div class="chests">${r.map((_,k)=>`<button class="chest" onclick="open_(${k})">🎁<small>Öppna</small></button>`).join('')}</div></div>`;
+  window._r=r;locked=false;
+}
+function open_(k){
+  if(locked)return;locked=true;
+  const r=window._r[k];gold=r.f(gold);
+  const b=document.querySelectorAll('.chest')[k];
+  b.classList.add('pop');b.innerHTML=`${r.t.includes('Tjuv')?'🦹':'💰'}<small>${r.t}</small>`;
+  document.querySelector('.hud').lastElementChild.textContent='🪙 '+gold;
+  setTimeout(next,1400);
+}
+function next(){i++;i>=Q.length?end():ask()}
+function end(){
+  app.innerHTML=`<div class="card"><h2>Omgången är slut</h2><div class="big">🪙 ${gold}</div>
+  <p>Du svarade rätt på ${right} av ${Q.length} frågor.</p>
+  <div class="row"><button onclick="start()">Spela igen</button><button class="ghost" onclick="home()">Startsidan</button></div></div>`;
+}
+function edit(m){
+  app.innerHTML=`<h2>Egna frågor</h2><p>En fråga per rad: Fråga | Rätt svar | Fel 1 | Fel 2 | Fel 3</p>
+  <textarea id="t" spellcheck="false" aria-label="Frågor">${esc(text)}</textarea>
+  <p class="msg" role="status">${m||''}</p>
+  <div class="row"><button onclick="save()">Spara</button><button class="ghost" onclick="home()">Avbryt</button></div>`;
+}
+function save(){
+  const v=document.getElementById('t').value;
+  if(!parse(v).length){edit('Ingen giltig fråga hittades. Använd tecknet | mellan svaren.');return}
+  text=v;home();
+}
+home();
+</script>
+</body>
+</html>
